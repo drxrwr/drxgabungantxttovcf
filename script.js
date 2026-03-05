@@ -58,8 +58,7 @@ function renderFileList() {
 function readAllFiles() {
   if (!uploadedFiles.length) {
     document.getElementById("numberTextArea").value = "";
-    document.getElementById("totalNumberInfo").innerText =
-      `Total nomor: 0`;
+    document.getElementById("totalNumberInfo").innerText = "Total nomor: 0";
     return;
   }
 
@@ -73,6 +72,7 @@ function readAllFiles() {
           .split(/\r?\n/)
           .map((l) => l.trim())
           .filter((l) => l);
+
         totalNumbers += lines.length;
         resolve(lines);
       };
@@ -94,8 +94,10 @@ document
   .addEventListener("click", async function () {
     const rawNumbers =
       document.getElementById("numberTextArea").value.trim();
+
     const nameBase =
       document.getElementById("contactNameInput").value.trim();
+
     const fixedFileName =
       document.getElementById("fixedFileNameCheckbox").checked;
 
@@ -127,6 +129,9 @@ document
       .map((l) => formatPhoneNumber(l.trim()))
       .filter((l) => l);
 
+    const totalContacts = numbers.length;
+    const digitLength = totalContacts.toString().length;
+
     const outputDiv =
       document.getElementById("splitVcfFiles");
     outputDiv.innerHTML = "";
@@ -143,17 +148,24 @@ document
       }
     }
 
+    let globalCounter = 0;
+
     chunks.forEach((chunk, chunkIdx) => {
       let vcfContent = "";
-      const digitLength = numbers.length.toString().length;
 
-      chunk.forEach((number, idx) => {
-        const globalIndex = chunkIdx * chunk.length + idx + 1;
-        const padded = padNumber(globalIndex, digitLength);
+      chunk.forEach((number) => {
+        globalCounter++;
+        const padded = padNumber(globalCounter, digitLength);
 
-        const contactName = nameBase
-          ? `${parseWithSpasi(nameBase)} ${padded}`
-          : `kontak ${padded}`;
+        let contactName;
+
+        if (useCustomName) {
+          contactName = `${parseWithSpasi(nameBase)} ${parseWithSpasi(fileNameRaw)} ${padded} ${parseWithSpasi(additionalFileNameRaw)}`.trim();
+        } else {
+          contactName = nameBase
+            ? `${parseWithSpasi(nameBase)} ${padded}`
+            : `kontak ${padded}`;
+        }
 
         vcfContent += `BEGIN:VCARD
 VERSION:3.0
@@ -165,8 +177,15 @@ END:VCARD
 
       let splitFileName;
 
-      if (fixedFileName) {
-        splitFileName = parseWithSpasi(fileNameRaw);
+      if (fixedFileName && uploadedFiles.length) {
+        const originalName =
+          uploadedFiles[0].name.replace(/\.txt$/i, "");
+
+        if (chunks.length > 1) {
+          splitFileName = `${originalName}_${chunkIdx + 1}`;
+        } else {
+          splitFileName = originalName;
+        }
       } else {
         splitFileName =
           parseWithSpasi(fileNameRaw) +
